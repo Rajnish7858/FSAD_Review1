@@ -48,6 +48,12 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('lt_user')
   }
 
+  function updateUser(updates) {
+    const updatedUser = { ...user, ...updates }
+    setUser(updatedUser)
+    localStorage.setItem('lt_user', JSON.stringify(updatedUser))
+  }
+
   function addAssessment(assessment) {
     setAssessments((s) => [...s, { ...assessment, id: Date.now() }])
   }
@@ -64,6 +70,7 @@ export function AuthProvider({ children }) {
     user,
     login,
     logout,
+    updateUser,
     assessments,
     addAssessment,
     updateAssessment,
