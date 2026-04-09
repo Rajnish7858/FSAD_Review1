@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Container, TextField, Button, Typography, Box, Paper, Avatar } from '@mui/material'
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
@@ -24,6 +25,11 @@ export default function Login() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+      <Box sx={{ position: 'fixed', top: 16, left: 16 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} sx={{ color: '#fff', fontWeight: 600, '&:hover': { background: 'rgba(255,255,255,0.15)' } }}>
+          Back to Home
+        </Button>
+      </Box>
       <Container maxWidth="xs">
         <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 5 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>

@@ -13,6 +13,35 @@ export default function Assessments() {
   const [openForm, setOpenForm] = useState(false)
 
   const subjects = ['All Subjects', 'FSAD', 'AIML', 'NLP', 'OS']
+
+  const handleExport = () => {
+    const rows = [['Student', 'Subject', 'Assessment', 'Learning Outcome', 'Score', 'Max Score', 'Percentage', 'Date']]
+    filtered.forEach(a => {
+      a.scores
+        .filter(s => user?.role === 'teacher' || s.studentId === user?.id)
+        .forEach(s => {
+          const student = students.find(st => st.id === s.studentId)
+          rows.push([
+            student?.name || `Student ${s.studentId}`,
+            a.title.split(' ')[0],
+            a.title,
+            a.learningOutcome,
+            s.score,
+            a.maxScore,
+            `${Math.round((s.score / a.maxScore) * 100)}%`,
+            a.date
+          ])
+        })
+    })
+    const csv = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'assessments.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   
   const filtered = assessments.filter((a) => {
     const matchesSearch = a.title.toLowerCase().includes(q.toLowerCase())
@@ -51,7 +80,7 @@ export default function Assessments() {
         </Grid>
         <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
           <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
-            <Button variant="outlined" startIcon={<DownloadIcon />}>Export</Button>
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExport}>Export CSV</Button>
             {user?.role === 'teacher' && (
               <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenForm(true)}>Add Assessment</Button>
             )}
