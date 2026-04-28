@@ -71,12 +71,14 @@ export function AuthProvider({ children }) {
 
   async function addAssessment(assessment) {
     const saved = await api.addAssessment(assessment)
-    setAssessments(s => [...s, saved])
+    const normalized = { ...saved, scores: (saved.scores || []).map(s => ({ studentId: s.student?.id || s.studentId, score: s.score })) }
+    setAssessments(s => [...s, normalized])
   }
 
   async function updateAssessment(id, update) {
     const saved = await api.updateAssessment(id, update)
-    setAssessments(s => s.map(a => a.id === id ? saved : a))
+    const normalized = { ...saved, scores: (saved.scores || []).map(s => ({ studentId: s.student?.id || s.studentId, score: s.score })) }
+    setAssessments(s => s.map(a => a.id === id ? normalized : a))
   }
 
   async function deleteAssessment(id) {
