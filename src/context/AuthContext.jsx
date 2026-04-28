@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { users as mockUsers, assessments as mockAssessments, students as mockStudents } from '../api/mockData'
+import { api } from '../api/api'
 
 const AuthContext = createContext()
 
@@ -9,76 +9,86 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('lt_user')) || null
-    } catch {
-      return null
-    }
+    try { return JSON.parse(localStorage.getItem('lt_user')) || null } catch { return null }
   })
-
-  const [assessments, setAssessments] = useState(() => {
-    const saved = localStorage.getItem('lt_assessments')
-    const version = localStorage.getItem('lt_version')
-    if (version !== '2') {
-      localStorage.setItem('lt_version', '2')
-      return mockAssessments
-    }
-    return saved ? JSON.parse(saved) : mockAssessments
-  })
+  const [assessments, setAssessments] = useState([])
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem('lt_assessments', JSON.stringify(assessments))
-  }, [assessments])
-
-  useEffect(() => {
-    localStorage.setItem('lt_user', JSON.stringify(user))
+    if (user) {
+      api.getAssessments().then(data => {
+        // normalize scores to match frontend format {studentId, score}
+        const normalized = data.map(a => ({
+          ...a,
+          scores: (a.scores || []).map(s => ({
+            studentId: s.student?.id || s.studentId,
+            score: s.score
+          }))
+        }))
+        setAssessments(normalized)
+      }).catch(() => {})
+      api.getStudents().then(data => {
+        setStudents(data.map(s => ({ id: s.id, name: s.name, major: s.major || 'Computer Science' })))
+      }).catch(() => {})
+    }
   }, [user])
 
-  function login(username, password) {
-    const found = mockUsers.find((u) => u.username === username && u.password === password)
-    if (found) {
-      setUser(found)
-      return { ok: true, user: found }
+  async function login(username, password) {
+    try {
+      const data = await api.login({ username, password })
+      if (data.token) {
+        localStorage.setItem('lt_token', data.token)
+        localStorage.setItem('lt_user', JSON.stringify(data.user))
+        setUser(data.user)
+        return { ok: true, user: data.user }
+      }
+      return { ok: false }
+    } catch {
+      return { ok: false }
     }
-    return { ok: false }
   }
 
   function logout() {
     setUser(null)
+    setAssessments([])
     localStorage.removeItem('lt_user')
+    localStorage.removeItem('lt_token')
   }
 
-  function updateUser(updates) {
-    const updatedUser = { ...user, ...updates }
-    setUser(updatedUser)
-    localStorage.setItem('lt_user', JSON.stringify(updatedUser))
+  async function updateUser(updates) {
+    try {
+      const updated = await api.updateMe(updates)
+      const newUser = { ...user, ...updated }
+      setUser(newUser)
+      localStorage.setItem('lt_user', JSON.stringify(newUser))
+    } catch {
+      const newUser = { ...user, ...updates }
+      setUser(newUser)
+      localStorage.setItem('lt_user', JSON.stringify(newUser))
+    }
   }
 
-  function addAssessment(assessment) {
-    setAssessments((s) => [...s, { ...assessment, id: Date.now() }])
+  async function addAssessment(assessment) {
+    const saved = await api.addAssessment(assessment)
+    setAssessments(s => [...s, saved])
   }
 
-  function updateAssessment(id, update) {
-    setAssessments((s) => s.map((a) => (a.id === id ? { ...a, ...update } : a)))
+  async function updateAssessment(id, update) {
+    const saved = await api.updateAssessment(id, update)
+    setAssessments(s => s.map(a => a.id === id ? saved : a))
   }
 
-  function deleteAssessment(id) {
-    setAssessments((s) => s.filter((a) => a.id !== id))
+  async function deleteAssessment(id) {
+    await api.deleteAssessment(id)
+    setAssessments(s => s.filter(a => a.id !== id))
   }
 
-  const value = {
-    user,
-    login,
-    logout,
-    updateUser,
-    assessments,
-    addAssessment,
-    updateAssessment,
-    deleteAssessment,
-    students: mockStudents
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, login, logout, updateUser, assessments, addAssessment, updateAssessment, deleteAssessment, students, loading }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export default AuthContext

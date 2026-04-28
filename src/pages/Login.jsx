@@ -14,7 +14,7 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const res = login(username, password)
+    const res = await login(username, password)
     if (res.ok) {
       if (res.user.role === 'teacher') navigate('/teacher')
       else navigate('/student')
